@@ -1,61 +1,71 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Over/Under eBasket Pro", layout="centered")
-st.title("🏀 Bot Over/Under eBasket Avanzado")
+st.set_page_config(page_title="Over/Under eBasket - Q3+", layout="centered")
+st.title("🏀 Bot Over/Under eBasket (Desde 3er Cuarto)")
 
-# Inputs del partido
-st.header("📊 Datos del partido en vivo")
+# === 1. CONTEXTO DEL PARTIDO ===
+st.header("📌 Contexto del partido")
 
-cuarto = st.radio("Cuarto actual", [1, 2, 3, 4], horizontal=True)
-minuto = st.slider("Minuto del cuarto", 0.0, 5.0, 2.5, 0.1)
+favorito_pre = st.selectbox("¿Quién era el favorito prepartido?", ["Equipo 1", "Equipo 2", "Parejo"])
+favorito_descanso = st.selectbox("¿Quién va ganando al descanso?", ["Equipo 1", "Equipo 2", "Empate"])
 
-# Puntos por cuarto
+# === 2. PUNTOS POR CUARTO ===
+st.header("📊 Puntos por cuarto")
+
 q1 = st.number_input("Puntos en Q1", min_value=0)
 q2 = st.number_input("Puntos en Q2", min_value=0)
-q3 = st.number_input("Puntos en Q3", min_value=0) if cuarto >= 3 else 0
-q4 = st.number_input("Puntos en Q4", min_value=0) if cuarto == 4 else 0
+q3 = st.number_input("Puntos en Q3", min_value=0)
+q4 = st.number_input("Puntos en Q4", min_value=0)
 
-# Líneas
-linea_inicial = st.number_input("📉 Línea Over/Under inicial", min_value=0.0, step=0.5)
-linea_actual = st.number_input("📈 Línea actual en vivo", min_value=0.0, step=0.5)
+# === 3. LÍNEAS DE APUESTA ===
+st.header("📉 Líneas de apuesta")
 
-# Marcador
+linea_inicial = st.number_input("Línea Over/Under inicial (prepartido)", min_value=0.0, step=0.5)
+linea_actual = st.number_input("Línea Over/Under actual (en vivo)", min_value=0.0, step=0.5)
+
+# === 4. MARCADOR ACTUAL ===
+st.header("🏁 Marcador actual")
+
 eq1 = st.number_input("Puntos equipo 1", min_value=0)
 eq2 = st.number_input("Puntos equipo 2", min_value=0)
 
-# Botón de análisis
+# === 5. ANÁLISIS ===
 if st.button("🔍 Analizar partido"):
-    total = eq1 + eq2
-    jugados = (cuarto - 1) * 5 + minuto
-    ritmo_proyectado = (total / jugados) * 20 if jugados > 0 else 0
+    puntos_totales = q1 + q2 + q3 + q4
+    cuartos_jugados = 2 + int(q3 > 0) + int(q4 > 0)
+    ritmo_proyectado = (puntos_totales / cuartos_jugados) * 4 if cuartos_jugados > 0 else 0
     marcador_igualado = abs(eq1 - eq2) <= 5
-
     st.markdown("---")
     st.subheader("📈 Análisis automático")
-    st.metric("Minutos jugados", f"{jugados:.1f}/20")
-    st.metric("Total actual", f"{total} puntos")
+
+    st.metric("Puntos totales", f"{puntos_totales}")
+    st.metric("Cuartos jugados", f"{cuartos_jugados}/4")
     st.metric("Ritmo proyectado", f"{ritmo_proyectado:.1f}")
     st.metric("Línea inicial", f"{linea_inicial}")
     st.metric("Línea actual", f"{linea_actual}")
 
-    # Evaluación
-    if ritmo_proyectado > linea_actual and linea_actual < linea_inicial - 5 and marcador_igualado:
-        st.success("🔥 OVER con valor detectado")
-    elif ritmo_proyectado < linea_actual and linea_actual > linea_inicial + 5 and not marcador_igualado:
-        st.warning("❄️ UNDER con valor detectado")
+    # Reglas de decisión
+    if ritmo_proyectado > linea_actual and linea_actual < linea_inicial - 5:
+        if favorito_pre != favorito_descanso:
+            st.success("🔥 OVER con valor: posible remontada o ritmo alto inesperado")
+        else:
+            st.info("📈 OVER posible: ritmo fuerte, partido dentro de guión")
+    elif ritmo_proyectado < linea_actual and linea_actual > linea_inicial + 5:
+        if favorito_pre == favorito_descanso and not marcador_igualado:
+            st.warning("❄️ UNDER con valor: favorito dominante, ritmo bajo")
+        else:
+            st.info("📉 UNDER moderado: ritmo lento y línea alta")
     else:
-        st.info("🤔 Partido dentro de ritmo esperado. No hay valor claro.")
+        st.info("🤔 No hay señal clara según ritmo y contexto actual.")
 
-# REGISTRO HISTÓRICO
+# === 6. HISTORIAL DE APUESTAS ===
 st.markdown("---")
 st.header("📋 Registro de apuestas")
 
-# Inicializa historial
 if "historial" not in st.session_state:
     st.session_state.historial = []
 
-# Formulario
 with st.form("registro"):
     prediccion = st.selectbox("Predicción realizada", ["Over", "Under"])
     cuota = st.number_input("Cuota apostada", value=1.80, step=0.01)
