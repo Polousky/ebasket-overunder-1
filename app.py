@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Over/Under eBasket - Q3+", layout="centered")
-st.title("🏀 Bot Over/Under eBasket (Desde 3er Cuarto)")
+st.set_page_config(page_title="Over/Under eBasket - Descanso", layout="centered")
+st.title("🏀 Bot Over/Under eBasket (Descanso)")
 
 # === 1. CONTEXTO DEL PARTIDO ===
 st.header("📌 Contexto del partido")
@@ -10,13 +10,13 @@ st.header("📌 Contexto del partido")
 favorito_pre = st.selectbox("¿Quién era el favorito prepartido?", ["Equipo 1", "Equipo 2", "Parejo"])
 favorito_descanso = st.selectbox("¿Quién va ganando al descanso?", ["Equipo 1", "Equipo 2", "Empate"])
 
-# === 2. PUNTOS POR CUARTO ===
-st.header("📊 Puntos por cuarto")
+# === 2. PUNTOS POR EQUIPO Y CUARTO ===
+st.header("📊 Puntos por equipo (1er y 2º cuarto)")
 
-q1 = st.number_input("Puntos en Q1", min_value=0)
-q2 = st.number_input("Puntos en Q2", min_value=0)
-q3 = st.number_input("Puntos en Q3", min_value=0)
-q4 = st.number_input("Puntos en Q4", min_value=0)
+eq1_q1 = st.number_input("Equipo 1 - Q1", min_value=0)
+eq1_q2 = st.number_input("Equipo 1 - Q2", min_value=0)
+eq2_q1 = st.number_input("Equipo 2 - Q1", min_value=0)
+eq2_q2 = st.number_input("Equipo 2 - Q2", min_value=0)
 
 # === 3. LÍNEAS DE APUESTA ===
 st.header("📉 Líneas de apuesta")
@@ -24,42 +24,42 @@ st.header("📉 Líneas de apuesta")
 linea_inicial = st.number_input("Línea Over/Under inicial (prepartido)", min_value=0.0, step=0.5)
 linea_actual = st.number_input("Línea Over/Under actual (en vivo)", min_value=0.0, step=0.5)
 
-# === 4. MARCADOR ACTUAL ===
-st.header("🏁 Marcador actual")
-
-eq1 = st.number_input("Puntos equipo 1", min_value=0)
-eq2 = st.number_input("Puntos equipo 2", min_value=0)
-
-# === 5. ANÁLISIS ===
+# === 4. ANÁLISIS ===
 if st.button("🔍 Analizar partido"):
-    puntos_totales = q1 + q2 + q3 + q4
-    cuartos_jugados = 2 + int(q3 > 0) + int(q4 > 0)
-    ritmo_proyectado = (puntos_totales / cuartos_jugados) * 4 if cuartos_jugados > 0 else 0
-    marcador_igualado = abs(eq1 - eq2) <= 5
+    eq1_total = eq1_q1 + eq1_q2
+    eq2_total = eq2_q1 + eq2_q2
+    total_puntos = eq1_total + eq2_total
+
+    prom_q_eq1 = eq1_total / 2
+    prom_q_eq2 = eq2_total / 2
+    ritmo_proyectado = (prom_q_eq1 + prom_q_eq2) * 4
+
     st.markdown("---")
     st.subheader("📈 Análisis automático")
 
-    st.metric("Puntos totales", f"{puntos_totales}")
-    st.metric("Cuartos jugados", f"{cuartos_jugados}/4")
+    st.metric("Total puntos al descanso", total_puntos)
     st.metric("Ritmo proyectado", f"{ritmo_proyectado:.1f}")
+    st.metric("Prom. por cuarto Equipo 1", f"{prom_q_eq1:.1f}")
+    st.metric("Prom. por cuarto Equipo 2", f"{prom_q_eq2:.1f}")
     st.metric("Línea inicial", f"{linea_inicial}")
     st.metric("Línea actual", f"{linea_actual}")
 
-    # Reglas de decisión
+    margen = abs(eq1_total - eq2_total)
+
     if ritmo_proyectado > linea_actual and linea_actual < linea_inicial - 5:
         if favorito_pre != favorito_descanso:
-            st.success("🔥 OVER con valor: posible remontada o ritmo alto inesperado")
+            st.success("🔥 OVER con valor: ritmo alto + posible remontada")
         else:
-            st.info("📈 OVER posible: ritmo fuerte, partido dentro de guión")
+            st.info("📈 OVER posible: ritmo fuerte y línea bajada")
     elif ritmo_proyectado < linea_actual and linea_actual > linea_inicial + 5:
-        if favorito_pre == favorito_descanso and not marcador_igualado:
-            st.warning("❄️ UNDER con valor: favorito dominante, ritmo bajo")
+        if favorito_pre == favorito_descanso and margen > 10:
+            st.warning("❄️ UNDER con valor: favorito dominante + ritmo bajo")
         else:
-            st.info("📉 UNDER moderado: ritmo lento y línea alta")
+            st.info("📉 UNDER moderado: ritmo bajo y línea alta")
     else:
         st.info("🤔 No hay señal clara según ritmo y contexto actual.")
 
-# === 6. HISTORIAL DE APUESTAS ===
+# === 5. HISTORIAL DE APUESTAS ===
 st.markdown("---")
 st.header("📋 Registro de apuestas")
 
